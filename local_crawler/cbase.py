@@ -108,7 +108,7 @@ class cbase():
                 cleaned_str=re.sub(r'<[/a-z,A-Z]+>',"",str)
                 n+=1
                 ## getter
-                if type(card)!=dict:
+                if card is None:
                     dicts={
                         f"order_{depth_level}" : n,
                         f"element_title_{depth_level}" : i.get_attribute('title'),
@@ -119,16 +119,28 @@ class cbase():
                 else:
                     dicts=dict()
                     for kk in card.keys():
-                        case=card[kk].split("-")
+                        case=card[kk].split("_")
                         if case[0]=="tag":
-                            self.logger.debug(f"[check_depth] : {case[0]}")
-                            str=i.find_element(By.TAG_NAME,"a").get_attribute(case[-1])
-                        elif case[0]=="a":
-                            self.logger.debug(f"[check_depth] : {case[0]}")
-                            str=i.find_element(By.TAG_NAME,"a").get_attribute(case[-1])
-                        elif case[0]=="xpath":
-                            self.logger.debug(f"[check_depth] : {case[0]}")
-                            str=i.find_element(By.TAG_NAME,"a").get_attribute(case[-1])
+                            try:
+                                self.logger.debug(f"[check_depth] : {case[0]}")
+                                str=i.find_element(By.TAG_NAME,case[1]).get_attribute(case[-1])
+                            except:
+                                str=None
+                                self.logger.info(f"[check_depth] {kk} : No string")
+                        elif case[0]=="class":
+                            try:
+                                self.logger.debug(f"[check_depth] : {case[0]}")
+                                str=i.find_element(By.CLASS_NAME,case[1]).get_attribute(case[-1])
+                            except:
+                                str=None
+                                self.logger.info(f"[check_depth] {kk} : No string")
+                        elif case[0]=="XPATH":
+                            try:
+                                self.logger.debug(f"[check_depth] : {case[0]}")
+                                str=i.find_element(By.XPATH,case[1]).get_attribute(case[-1])
+                            except:
+                                str=None
+                                self.logger.info(f"[check_depth] {kk} : No string")
                         else:
                             self.logger.error(f"method is not prepared")
                             return 0 
@@ -157,16 +169,28 @@ class cbase():
                 else:
                     dicts=dict()
                     for kk in card.keys():
-                        case=card[kk].split("-")
+                        case=card[kk].split("_")
                         if case[0]=="tag":
-                            self.logger.debug(f"[check_depth] : {case[0]}")
-                            str=i.find_element(By.TAG_NAME,"a").get_attribute(case[-1])
-                        elif case[0]=="a":
-                            self.logger.debug(f"[check_depth] : {case[0]}")
-                            str=i.find_element(By.TAG_NAME,"a").get_attribute(case[-1])
-                        elif case[0]=="xpath":
-                            self.logger.debug(f"[check_depth] : {case[0]}")
-                            str=i.find_element(By.TAG_NAME,"a").get_attribute(case[-1])
+                            try: 
+                                self.logger.debug(f"[check_depth] : {case[0]}")
+                                str=i.find_element(By.TAG_NAME,case[1]).get_attribute(case[-1])
+                            except:
+                                str=None
+                                self.logger.info(f"[check_depth] {kk} : No string")
+                        elif case[0]=="class":
+                            try: 
+                                self.logger.debug(f"[check_depth] : {case[0]}")
+                                str=i.find_element(By.CLASS_NAME,case[1]).get_attribute(case[-1])
+                            except:
+                                str=None
+                                self.logger.info(f"[check_depth] {kk} : No string")
+                        elif case[0]=="XPATH":
+                            try:
+                                self.logger.debug(f"[check_depth] : {case[0]}")
+                                str=i.find_element(By.XPATH,case[1]).get_attribute(case[-1])
+                            except:
+                                str=None
+                                self.logger.info(f"[check_depth] {kk} : No string")
                         else:
                             self.logger.error(f"method is not prepared")
                             return 0               
@@ -212,7 +236,7 @@ class cbase():
         depth_level:int=None,
         before_info:pd.DataFrame=None,
         card:dict=None
-        ):
+        )-> pd.DataFrame():
         '''
         activate with depth checker
         dependency : check_depth       
@@ -251,7 +275,44 @@ class cbase():
                 # except: 
                 #     self.logger.error(f"[activate_depth] depth: health check error.")
             results=results.reset_index()
-            return list_items, results
+            return list_items, results    
+    def activate_single_depth_info(
+            self,
+            before_info_series:pd.Series,
+            depth_level:int=None,
+            custom_checker=None,
+            custom_getter=None,
+        )-> pd.Series():
+        '''
+        TODO writing help
+        '''
+        information=None
+
+        if depth_level is None:
+            self.logger.info("[add_single_depth_info] depth_level : None")
+            self.logger.error("depth_level should be provided")
+            return 0
+        else:
+            self.logger.info(f"[add_single_depth_info] depth_level : {depth_level}")
+            self.driver.get(before_info_series[f"element_href_{depth_level}"])
+
+        ## custom checker
+
+        if type(custom_checker)!=None:
+            self.logger.info(f"[add_single_depth_info] custom_checker : called")
+            custom_checker(class_object=self)
+            self.logger.info(f"[add_single_depth_info] custom_checker : done")
+        
+        if type(custom_getter)!=None:
+            self.logger.info(f"[add_single_depth_info] custom_getter : called")
+            information=custom_getter(class_object=self)
+            self.logger.info(f"[add_single_depth_info] custom_getter : done")
+            before_info_series[f"element_custom_info_{depth_level}"]=information
+
+        results=before_info_series
+        return results
+
+    
     '''
     main scripts
     - top down
@@ -262,7 +323,6 @@ class cbase():
         self.logger.info("start run_script")
         '''
         
-
 
         '''
         _path=os.path.join(os.getcwd(),'local_crawler','script','case_1.json')
@@ -278,7 +338,6 @@ class cbase():
         target_check=scripts["target_checker"]
         sub_check=scripts["sub_checker"]
         target_card=scripts["cards"]
-        
 
         self.logger.info(f"making chrome concole : {target}")
         self.driver.get(target) 
@@ -305,13 +364,54 @@ class cbase():
         
         self.logger.info("single level search")
 
-
-
         return df
 
-    def run_scripts_bottom_up(self):
+    def run_scripts_bottom_up(self,df:pd.DataFrame=None):
         self.logger.info("start run_script")
+        self.logger.info("single_items")
+        ### bottom sheet check
+        
+        _path=os.path.join(os.getcwd(),'local_crawler','script','case_2_unstructed.json')
+        with open(_path, "r") as f:
+            case_2_info=json.load(f)
 
+        if df is None:
+            df=pd.DataFrame({"element_href_3":[case_2_info["href_sample"]]})
+
+        from script.custom_script import custom_checker,custom_getter
+
+        for df_series in df.iloc:
+            df_series=self.activate_single_depth_info(
+                depth_level=3,
+                before_info_series=df_series,
+                custom_checker=custom_checker,
+                custom_getter=custom_getter
+            )
+
+            _,df=self.check_depth(
+                checker=case_2_info["checker"],
+                depth_level=4,
+                before_info=df_series,
+                card=case_2_info["cards"],
+            )
+            
+            ## 구조 확인
+            ## 파일 수집
+
+
+
+            ## //*[@id="2"]/div/span/img
+
+
+            self.logger.info("single item done")
+
+        
+
+        
+
+        
+        
+        
 
 
 
@@ -329,8 +429,9 @@ if __name__=="__main__":
             
     #### logging
    
-    c=cbase(headless=False)
-    results=c.run_scripts_top_down()
+    c=cbase(headless=True)
+
+    results=c.run_scripts_bottom_up()
 
     print("done")
 
